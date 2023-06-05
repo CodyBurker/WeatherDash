@@ -2,43 +2,48 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import geopandas as gpd
-import pandas as pd
 import altair as alt
 
-# @st.cache_data
-def load_data():
-    # Read in the shapefile of climate divisions
-    gdf = gpd.read_file('CONUS_CLIMATE_DIVISIONS.shp/GIS.OFFICIAL_CLIM_DIVISIONS.shp')
+SHAPE_FILEPATH = 'CONUS_CLIMATE_DIVISIONS.shp/GIS.OFFICIAL_CLIM_DIVISIONS.shp'
+PAR_FILEPATH = 'climdiv-tmpcdv-v1.0.0-20230504.parquet'
+
+@st.cache_data
+def read_shp_file(filepath = SHAPE_FILEPATH):
+    gdf = gpd.read_file(filepath)
     gdf_converted = gdf
     gdf_converted['division_number'] = gdf_converted['CD_NEW'].apply(lambda x: f'{int(x):02d}0')
     gdf_converted['state_code'] = gdf_converted['STATE_FIPS']
     gdf_converted['state_div'] = gdf_converted['state_code'] + gdf_converted['division_number']
     gdf_converted.set_index('state_div', inplace=True)
-    print(len(gdf_converted))
-    div_weather = pd.read_parquet('climdiv-tmpcdv-v1.0.0-20230504.parquet')
+    return(gdf_converted)
+
+@st.cache_data
+def read_parquet_file(filepath = PAR_FILEPATH):
+    div_weather = pd.read_parquet(filepath)
     div_weather['state_div'] = div_weather['state_code'] + div_weather['division_number']
     div_weather.set_index('state_div', inplace=True)
-    # Join the weather data to the shapefile
-    # gdf_weather = gdf_converted.merge(div_weather, on = 'state_div', how='outer')
+    return(div_weather)
+
+def load_data():
+    # Read in the shapefile of climate divisions
+    gdf_converted = read_shp_file(SHAPE_FILEPATH)
+    div_weather = read_parquet_file(PAR_FILEPATH)
+
     all_data = gdf_converted.merge(div_weather, on = 'state_div', how='outer')
-    gdf_weather_23 = gdf_converted.merge(div_weather.query('year == "2023" and month == "01"'), on = 'state_div', how='outer')
-    print(f'gdf_weather_23: {len(gdf_weather_23)}')
-    return gdf_weather_23, all_data
+    return pd.DataFrame(all_data)
 
 
 
-year, total = load_data()
-
+total = load_data()
 
 
 date_range = st.slider('Years', 
-          min_value= min(indiana['year'].astype(int)), 
-          max_value = max(indiana['year'].astype(int)), 
+          min_value= min(total['year'].dropna().astype(int)), 
+          max_value = max(total['year'].dropna().astype(int)), 
           value=[1950,2023])
 
 indiana = total.query('STATE == "Indiana" and value > -50').sort_values('date').groupby(['year', 'month']).agg({'value':'mean'}).reset_index()
 
-print(date_range)
 
 indiana_filtered = indiana[(indiana['year'].astype(int) >= date_range[0]) & (indiana['year'].astype(int) <= date_range[1])]
 # Color is month
