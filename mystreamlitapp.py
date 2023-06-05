@@ -33,22 +33,34 @@ def load_data():
     return pd.DataFrame(all_data)
 
 
+def filter_state(input_data, state):
+    filtered = input_data.\
+        query(f'STATE == "{state}" and value > -50').\
+        sort_values('date').\
+        groupby(['year', 'month']).\
+        agg({'value':'mean'}).\
+        reset_index()
+    return(filtered)
+
+
+# indiana = total.query('STATE == "Indiana" and value > -50').sort_values('date').groupby(['year', 'month']).agg({'value':'mean'}).reset_index()
 
 total = load_data()
-
-
 date_range = st.slider('Years', 
           min_value= min(total['year'].dropna().astype(int)), 
           max_value = max(total['year'].dropna().astype(int)), 
           value=[1950,2023])
 
-indiana = total.query('STATE == "Indiana" and value > -50').sort_values('date').groupby(['year', 'month']).agg({'value':'mean'}).reset_index()
+all_states = total[['STATE']].drop_duplicates().sort_values('STATE')
+selected_state = st.selectbox(
+    'Select State',
+    all_states,)
 
-
-indiana_filtered = indiana[(indiana['year'].astype(int) >= date_range[0]) & (indiana['year'].astype(int) <= date_range[1])]
+state_filtered = filter_state(total, selected_state)
+# state_filtered = state_filtered[(state_filtered['year'].astype(int) >= date_range[0]) & (state_filtered['year'].astype(int) <= date_range[1])]
 # Color is month
 chart = alt.Chart(
-    indiana_filtered
+    state_filtered
     ).mark_line(
         interpolate='basis'
     ).encode(
