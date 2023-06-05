@@ -3,3 +3,9 @@ numpy
 plotly
 altair
 geopandas
+pyarrow
+matplotlib
+nbformat>=4.2.0
+ipython
+pyproj
+bokeh
