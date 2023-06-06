@@ -118,6 +118,8 @@ def plot_radial(df):
     )   
     return fig
 
+# https://ipyvizzu.vizzuhq.com/latest/examples/presets/53_P_C_polar_scatter/
+
 
 fig2 = go.Figure()
 for year in state_filtered['year'].unique():
