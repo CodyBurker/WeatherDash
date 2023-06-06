@@ -4,6 +4,7 @@ import numpy as np
 import geopandas as gpd
 import altair as alt
 import plotly.express as px
+import plotly.graph_objects as go
 
 SHAPE_FILEPATH = 'CONUS_CLIMATE_DIVISIONS.shp/GIS.OFFICIAL_CLIM_DIVISIONS.shp'
 PAR_FILEPATH = 'climdiv-tmpcdv-v1.0.0-20230504.parquet'
@@ -98,21 +99,35 @@ st.altair_chart(chart,use_container_width=True)
 
 # Create radar chart
 theta = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-fig = px.line_polar(
-    state_filtered.groupby('month').agg({'value':'mean'}).reset_index(),
-    r='value',
-    theta=theta,
+def plot_radial(df):
+    r_values = df['value'].tolist()
+    r_values.append(r_values[0])  # Append the first value to the end of the list
+
+    theta_values = theta.copy()
+    theta_values.append(theta_values[0])  # Append the first value to the end of the list
+
+    fig = go.Scatterpolar(
+        r=r_values,
+        theta=theta_values,
+        mode='lines',
+        line_color='gray',
+        line_shape='spline',  # Make line into a spline
+        opacity=0.3,  # Adjust line opacity
+        name = df['year'].iloc[0],
+        hoverinfo = 'name+r',
+    )   
+    return fig
+
+
+fig2 = go.Figure()
+for year in state_filtered['year'].unique():
+    year_data = state_filtered[state_filtered['year'] == year]
+    if len(year_data) == 12:
+        fig2.add_trace(plot_radial(year_data)) # Change from state_filtered[state_filtered['year'] == year] to year_data
+fig2.update_layout(
+    # paper_bgcolor='#0e1117',
+    # plot_bgcolor='#0e1117',
+    plot_bgcolor='rgba(0,0,0,0)',
+    showlegend = False,
 )
-st.plotly_chart(fig, use_container_width=True)
-# Dict to turn numbers into month names
-# month_map={'1':'Jan','2':'Feb','3':'Mar'}
-
-# state_filtered_radial = state_filtered
-# state_filtered_radial['month'] = state_filtered_radial['month'] * 30
-
-# # Try scatter polar plot
-# fig = px.scatter_polar(
-#     state_filtered_radial,
-#     r='value',
-#     theta='month')
-# st.plotly_chart(fig, use_container_width=True)
+st.plotly_chart(fig2, use_container_width=True, theme = None)
